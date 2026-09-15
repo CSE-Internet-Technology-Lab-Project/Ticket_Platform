@@ -1,0 +1,29 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: ticketing-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ticketing
+      POSTGRES_PASSWORD: ticketing_password
+      POSTGRES_DB: ticketing_db
+    ports:
+      - "6000:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    environment:
+      DATABASE_URL: postgresql://ticketing:ticketing_password@postgres:5432/ticketing_db?schema=public
+      AUTH_SECRET: ${AUTH_SECRET:-development-only-secret-change-me}
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:
