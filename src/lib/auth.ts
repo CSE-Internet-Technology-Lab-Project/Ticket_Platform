@@ -4,7 +4,7 @@ import { promisify } from "util";
 const scrypt = promisify(scryptCallback);
 const sessionCookie = "ticketly_session";
 
-export type SessionUser = { id: string; name: string; email: string; role: "USER" | "ORGANIZER" };
+export type SessionUser = { id: string; name: string; email: string; role: "USER" | "ORGANIZER" | "ADMIN" };
 type SessionPayload = SessionUser & { exp: number };
 
 function secret() {

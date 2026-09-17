@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getOrganizer } from "@/lib/current-user";
+import { canManageAllEvents, getOrganizer } from "@/lib/current-user";
 
 export async function PATCH(request: Request, context: { params: Promise<{ eventId: string }> }) {
   const organizer = await getOrganizer();
@@ -19,7 +19,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ event
   if (venueName !== undefined && !venueName) return NextResponse.json({ error: "Cinema name cannot be empty." }, { status: 400 });
   if (city !== undefined && !city) return NextResponse.json({ error: "City cannot be empty." }, { status: 400 });
   if ([status, name, description, startTime, venueName, city].every((value) => value === undefined)) return NextResponse.json({ error: "No changes were provided." }, { status: 400 });
-  const existing = await prisma.event.findFirst({ where: { id: eventId, organizerId: organizer.id }, select: { id: true, startTime: true, endTime: true, venueId: true } });
+  const existing = await prisma.event.findFirst({ where: { id: eventId, ...(canManageAllEvents(organizer) ? {} : { organizerId: organizer.id }) }, select: { id: true, startTime: true, endTime: true, venueId: true } });
   if (!existing) return NextResponse.json({ error: "Showtime not found." }, { status: 404 });
   const duration = existing.endTime.getTime() - existing.startTime.getTime();
   await prisma.$transaction(async (tx) => {

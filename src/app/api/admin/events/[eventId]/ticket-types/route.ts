@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getOrganizer } from "@/lib/current-user";
+import { canManageAllEvents, getOrganizer } from "@/lib/current-user";
 
 export async function PATCH(request: Request, context: { params: Promise<{ eventId: string }> }) {
   const organizer = await getOrganizer();
@@ -11,7 +11,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ event
   if (!ticketTypes.length) return NextResponse.json({ error: "Provide at least one ticket type." }, { status: 400 });
   const updates = ticketTypes.map((rawTicketType) => { const ticketType = rawTicketType as Record<string, unknown>; return { id: typeof ticketType.id === "string" ? ticketType.id : "", name: typeof ticketType.name === "string" ? ticketType.name.trim() : "", description: typeof ticketType.description === "string" ? ticketType.description.trim() || null : null, basePrice: Number(ticketType.basePrice) }; });
   if (updates.some((ticketType) => !ticketType.id || !ticketType.name || !Number.isFinite(ticketType.basePrice) || ticketType.basePrice < 0)) return NextResponse.json({ error: "Each ticket type needs a name and valid base price." }, { status: 400 });
-  const event = await prisma.event.findFirst({ where: { id: eventId, organizerId: organizer.id }, select: { id: true, pricingPolicy: { select: { enabled: true } } } });
+  const event = await prisma.event.findFirst({ where: { id: eventId, ...(canManageAllEvents(organizer) ? {} : { organizerId: organizer.id }) }, select: { id: true, pricingPolicy: { select: { enabled: true } } } });
   if (!event) return NextResponse.json({ error: "Showtime not found." }, { status: 404 });
   await prisma.$transaction(async (tx) => {
     for (const ticketType of updates) {

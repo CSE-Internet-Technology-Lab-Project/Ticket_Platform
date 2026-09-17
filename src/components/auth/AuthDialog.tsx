@@ -5,7 +5,7 @@ import { ArrowRight, LoaderCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-export type AuthenticatedUser = { id: string; name: string; email: string; role: "USER" | "ORGANIZER" };
+export type AuthenticatedUser = { id: string; name: string; email: string; role: "USER" | "ORGANIZER" | "ADMIN" };
 
 export function AuthDialog({ onClose, onAuthenticated }: { onClose: () => void; onAuthenticated: (user: AuthenticatedUser) => void }) {
   const [signup, setSignup] = useState(false);
