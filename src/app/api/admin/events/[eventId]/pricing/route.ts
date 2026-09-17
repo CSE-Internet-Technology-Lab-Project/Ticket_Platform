@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import { getOrganizer } from "@/lib/current-user";
+import { canManageAllEvents, getOrganizer } from "@/lib/current-user";
 
 const types = new Set(["INVENTORY", "DEMAND", "TIME", "WEEKEND", "EARLY_BIRD", "LAST_MINUTE"]);
 const adjustmentTypes = new Set(["PERCENTAGE", "FIXED_AMOUNT", "MULTIPLIER"]);
@@ -16,7 +16,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ event
   const maximumPrice = Number(body?.maximumPrice);
   const rules: unknown[] | null = Array.isArray(body?.rules) ? body.rules : null;
   if (enabled === undefined || !Number.isFinite(minimumPrice) || !Number.isFinite(maximumPrice) || minimumPrice < 0 || maximumPrice < minimumPrice || !rules) return NextResponse.json({ error: "Provide valid pricing limits and rules." }, { status: 400 });
-  const event = await prisma.event.findFirst({ where: { id: eventId, organizerId: organizer.id }, select: { id: true, ticketTypes: { select: { id: true } } } });
+  const event = await prisma.event.findFirst({ where: { id: eventId, ...(canManageAllEvents(organizer) ? {} : { organizerId: organizer.id }) }, select: { id: true, ticketTypes: { select: { id: true } } } });
   if (!event) return NextResponse.json({ error: "Showtime not found." }, { status: 404 });
   const ticketTypeIds = new Set(event.ticketTypes.map((ticketType) => ticketType.id));
   const validRules = rules.map((rawRule) => { const rule = rawRule as Record<string, unknown>; return { id: typeof rule.id === "string" ? rule.id : undefined, name: typeof rule.name === "string" ? rule.name.trim() : "", type: rule.type, adjustmentType: rule.adjustmentType, adjustmentValue: Number(rule.adjustmentValue), conditions: rule.conditions && typeof rule.conditions === "object" ? rule.conditions : {}, priority: Number(rule.priority), enabled: typeof rule.enabled === "boolean" ? rule.enabled : true, ticketTypeId: typeof rule.ticketTypeId === "string" ? rule.ticketTypeId : null }; });

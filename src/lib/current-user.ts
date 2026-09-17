@@ -18,5 +18,9 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
 
 export async function getOrganizer() {
   const user = await getCurrentUser();
-  return user?.role === "ORGANIZER" ? user : null;
+  return user?.role === "ORGANIZER" || user?.role === "ADMIN" ? user : null;
+}
+
+export function canManageAllEvents(user: NonNullable<Awaited<ReturnType<typeof getOrganizer>>>) {
+  return user.role === "ADMIN";
 }

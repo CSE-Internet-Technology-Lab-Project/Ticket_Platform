@@ -18,6 +18,7 @@ datasource db {
 enum UserRole {
   USER
   ORGANIZER
+  ADMIN
 }
 
 enum UserStatus {
@@ -517,28 +518,21 @@ model Payment {
 // ============================================================
 
 model PaymentAttempt {
-  id        String @id @default(uuid())
+  id String @id @default(uuid())
   paymentId String
-
   idempotencyKey String @unique
-
   status PaymentAttemptStatus @default(INITIATED)
-
+  providerOrderId String?
   providerTransactionId String?
-  failureReason         String?
-
-  amount   Decimal @db.Decimal(10, 2)
-  currency String  @default("INR")
-
+  failureReason String?
+  amount Decimal @db.Decimal(10, 2)
+  currency String @default("INR")
   payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
   @@index([paymentId])
   @@index([providerTransactionId])
 }
-
 // ============================================================
 // PAYMENT WEBHOOK
 // ============================================================

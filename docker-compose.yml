@@ -12,18 +12,46 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: ticketing-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ticketing
+      RABBITMQ_DEFAULT_PASS: ticketing_password
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
   app:
+    image: ticket-platform:latest
     build:
       context: .
       dockerfile: Dockerfile
     restart: unless-stopped
     depends_on:
       - postgres
+      - rabbitmq
     environment:
       DATABASE_URL: postgresql://ticketing:ticketing_password@postgres:5432/ticketing_db?schema=public
       AUTH_SECRET: ${AUTH_SECRET:-development-only-secret-change-me}
+      RABBITMQ_URL: amqp://ticketing:ticketing_password@rabbitmq:5672
     ports:
       - "3000:3000"
 
+  outbox-worker:
+    image: ticket-platform:latest
+    restart: unless-stopped
+    depends_on:
+      - postgres
+      - rabbitmq
+    environment:
+      DATABASE_URL: postgresql://ticketing:ticketing_password@postgres:5432/ticketing_db?schema=public
+      RABBITMQ_URL: amqp://ticketing:ticketing_password@rabbitmq:5672
+    command: ["npm", "run", "worker:outbox"]
+
 volumes:
   postgres_data:
+  rabbitmq_data:

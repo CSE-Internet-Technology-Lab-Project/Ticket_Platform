@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getOrganizer } from "@/lib/current-user";
+import { canManageAllEvents, getOrganizer } from "@/lib/current-user";
 
 export async function GET() {
   const organizer = await getOrganizer();
   if (!organizer) return NextResponse.json({ error: "Organizer access is required." }, { status: 403 });
 
   const events = await prisma.event.findMany({
-    where: { organizerId: organizer.id },
+    where: canManageAllEvents(organizer) ? undefined : { organizerId: organizer.id },
     orderBy: { startTime: "asc" },
     include: {
       venue: { select: { name: true, city: true } },
