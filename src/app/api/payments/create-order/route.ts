@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/current-user";
-import { razorpay } from "@/lib/razorpay";
-
+import { getRazorpay } from "@/lib/razorpay";
 export async function POST(request: Request) {
   const user = await getCurrentUser();
 
@@ -212,7 +211,7 @@ export async function POST(request: Request) {
      * Razorpay expects the amount in paise:
      * ₹500 = 50000 paise
      */
-    const razorpayOrder = await razorpay.orders.create({
+    const razorpayOrder = await getRazorpay().orders.create({
       amount: Math.round(totalAmount * 100),
       currency: "INR",
       receipt: order.id,
