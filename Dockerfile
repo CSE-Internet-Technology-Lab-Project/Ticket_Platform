@@ -13,7 +13,8 @@ COPY --from=dependencies /app/node_modules ./node_modules
 COPY . .
 
 RUN DATABASE_URL=postgresql://build:build@localhost:5432/build npx prisma generate
-RUN npm run build
+
+RUN DATABASE_URL=postgresql://build:build@localhost:5432/build npm run build
 
 FROM node:20-bookworm-slim AS runner
 
