@@ -2,16 +2,31 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { canManageAllEvents, getOrganizer } from "@/lib/current-user";
 
-function sanitizeUrl(url?: unknown): string | null | undefined {
+function sanitizeImageUrl(url?: unknown): string | null | undefined {
   if (url === undefined) return undefined;
   if (url === null || url === "") return null;
   if (typeof url !== "string") return undefined;
   const trimmed = url.trim();
   if (!trimmed) return null;
-  if (trimmed.length > 2048 || !/^https?:\/\/\S+$|^\/\S+$/i.test(trimmed)) {
-    throw new Error("INVALID_URL");
+  if (/^data:image\/(jpeg|jpg|png|webp|gif|avif);base64,/i.test(trimmed) && trimmed.length <= 4 * 1024 * 1024) {
+    return trimmed;
   }
-  return trimmed;
+  if (trimmed.length <= 4096 && /^https?:\/\/\S+$|^\/\S+$/i.test(trimmed)) {
+    return trimmed;
+  }
+  throw new Error("INVALID_IMAGE_URL");
+}
+
+function sanitizeVideoUrl(url?: unknown): string | null | undefined {
+  if (url === undefined) return undefined;
+  if (url === null || url === "") return null;
+  if (typeof url !== "string") return undefined;
+  const trimmed = url.trim();
+  if (!trimmed) return null;
+  if (trimmed.length <= 2048 && /^https?:\/\/\S+$/i.test(trimmed)) {
+    return trimmed;
+  }
+  throw new Error("INVALID_VIDEO_URL");
 }
 
 export async function PATCH(request: Request, context: { params: Promise<{ eventId: string }> }) {
@@ -28,11 +43,15 @@ export async function PATCH(request: Request, context: { params: Promise<{ event
   let trailerUrl: string | null | undefined;
 
   try {
-    imageUrl = sanitizeUrl(body?.imageUrl);
-    trailerImageUrl = sanitizeUrl(body?.trailerImageUrl);
-    trailerUrl = sanitizeUrl(body?.trailerUrl);
-  } catch {
-    return NextResponse.json({ error: "Image and trailer URLs must be valid HTTP/HTTPS links or local paths." }, { status: 400 });
+    imageUrl = sanitizeImageUrl(body?.imageUrl);
+    trailerImageUrl = sanitizeImageUrl(body?.trailerImageUrl);
+    trailerUrl = sanitizeVideoUrl(body?.trailerUrl);
+  } catch (e) {
+    const isVideo = e instanceof Error && e.message === "INVALID_VIDEO_URL";
+    return NextResponse.json(
+      { error: isVideo ? "Trailer video link must be a valid HTTP/HTTPS URL." : "Image must be a valid image file, data URL, or HTTP/HTTPS link." },
+      { status: 400 }
+    );
   }
 
   const startTime = typeof body?.startTime === "string" ? new Date(body.startTime) : undefined;

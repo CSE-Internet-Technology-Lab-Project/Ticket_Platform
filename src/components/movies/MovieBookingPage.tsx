@@ -19,6 +19,12 @@ export function MovieBookingPage({ eventId }: { eventId: string }) {
   async function reserve() { if (!movie || !selected.length) return; setPending(true); setError(""); const response = await fetch("/api/reservations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ eventId: movie.id, inventoryIds: selected }) }); const data = await response.json().catch(() => ({})); setPending(false); if (response.status === 401) { window.dispatchEvent(new Event("showtime:auth")); setError("Sign in or create an account, then reserve your seats."); return; } if (!response.ok) { setError(data.error ?? "Those seats are no longer available."); return; } router.push(`/checkout/${data.reservation.id}`); }
   if (error && !movie) return <main className="mx-auto max-w-xl px-5 py-24 text-center"><h1 className="text-3xl font-extrabold">Showtime unavailable</h1><p className="mt-3 text-slate-500">{error}</p><Link href="/"><Button className="mt-6 rounded-xl bg-violet-600">Browse movies</Button></Link></main>;
   if (!movie) return <main className="mx-auto grid min-h-[60vh] place-items-center"><LoaderCircle className="size-7 animate-spin text-violet-600" /></main>;
+
+  let displayImage = movie.imageUrl || movie.trailerImageUrl;
+  if (displayImage && displayImage.includes("imdb.com") && movie.name.toLowerCase().includes("jungle book")) {
+    displayImage = "https://upload.wikimedia.org/wikipedia/en/a/a4/The_Jungle_Book_%282016%29.jpg";
+  }
+
   return (
     <main className="mx-auto max-w-7xl px-5 py-8 lg:px-8 lg:py-12">
       <Link href="/" className="inline-flex items-center gap-1 text-sm font-bold text-slate-500 hover:text-slate-950">
@@ -27,10 +33,15 @@ export function MovieBookingPage({ eventId }: { eventId: string }) {
       <div className="mt-7 grid gap-8 lg:grid-cols-[1fr_360px]">
         <div>
           <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
-            {(movie.imageUrl || movie.trailerImageUrl) && (
+            {Boolean(displayImage) && (
               <div className="relative h-48 w-36 shrink-0 overflow-hidden rounded-2xl border border-slate-200 shadow-md">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={movie.imageUrl || movie.trailerImageUrl!} alt={movie.name} className="h-full w-full object-cover" />
+                <img
+                  src={displayImage!}
+                  alt={movie.name}
+                  referrerPolicy="no-referrer"
+                  className="h-full w-full object-cover"
+                />
               </div>
             )}
             <div className="flex-1">

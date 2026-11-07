@@ -5,6 +5,7 @@ import { CalendarPlus, CheckCircle2, LoaderCircle, RefreshCw, Search, Settings2,
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { ImageUploadField } from "./ImageUploadField";
 
 type Status = "AVAILABLE" | "HELD" | "SOLD" | "BLOCKED";
 type Rule = { id?: string; name: string; type: string; adjustmentType: string; adjustmentValue: string | number; conditions: Record<string, unknown>; priority: number; enabled: boolean; ticketTypeId: string | null };
@@ -30,7 +31,7 @@ function CreateShowtime({ onClose, onCreated }: { onClose: () => void; onCreated
   async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); setBusy(true); setError(""); const values = Object.fromEntries(new FormData(event.currentTarget)); try { await json("/api/admin/events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(values) }); onClose(); onCreated(); } catch (e) { setError(e instanceof Error ? e.message : "Could not create showtime."); } finally { setBusy(false); } }
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/60 p-4 backdrop-blur-sm">
-      <form onSubmit={submit} className="relative w-full max-w-xl rounded-3xl bg-white p-6 shadow-2xl">
+      <form onSubmit={submit} className="relative max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl">
         <button type="button" onClick={onClose} aria-label="Close create showtime" className="absolute right-5 top-5 rounded-lg p-2 text-slate-400 hover:bg-slate-100"><X /></button>
         <p className="eyebrow text-violet-600">NEW SHOWTIME</p>
         <h2 className="mt-2 text-2xl font-black">Create a movie showtime</h2>
@@ -40,11 +41,15 @@ function CreateShowtime({ onClose, onCreated }: { onClose: () => void; onCreated
           <Input required name="venueName" placeholder="Cinema name" />
           <Input required name="city" defaultValue="Bengaluru" placeholder="City" />
           <Input required name="startTime" type="datetime-local" min={minimumStartTime} />
-          <Input name="imageUrl" placeholder="Poster image URL (https://...)" type="url" />
-          <Input name="trailerImageUrl" placeholder="Trailer image URL (https://...)" type="url" />
-          <Input name="trailerUrl" placeholder="Trailer video link (YouTube link)" type="url" className="sm:col-span-2" />
+          <div className="sm:col-span-2">
+            <ImageUploadField label="Movie poster image (drag or choose file)" name="imageUrl" placeholder="Paste image link (https://.../poster.jpg)" />
+          </div>
+          <div className="sm:col-span-2">
+            <ImageUploadField label="Movie trailer image (optional)" name="trailerImageUrl" placeholder="Paste trailer thumbnail link (https://...)" />
+          </div>
+          <Input name="trailerUrl" placeholder="Trailer video link (YouTube URL, optional)" type="url" className="sm:col-span-2" />
         </div>
-        <textarea name="description" placeholder="Short movie description" className="mt-3 min-h-24 w-full rounded-xl border p-3 text-sm text-slate-950" />
+        <textarea name="description" placeholder="Short movie description" className="mt-3 min-h-20 w-full rounded-xl border p-3 text-sm text-slate-950" />
         {error && <p role="alert" className="mt-3 rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
         <div className="mt-5 flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
@@ -67,7 +72,7 @@ function EventRow({ event, onManage, onRefresh }: { event: Event; onManage: (id:
         {(event.imageUrl || event.trailerImageUrl) && (
           <div className="relative size-12 shrink-0 overflow-hidden rounded-xl border border-slate-200">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={event.imageUrl || event.trailerImageUrl!} alt={event.name} className="h-full w-full object-cover" />
+            <img src={event.imageUrl || event.trailerImageUrl!} alt={event.name} referrerPolicy="no-referrer" className="h-full w-full object-cover" />
           </div>
         )}
         <div>
@@ -126,13 +131,17 @@ function Details({ event, busy, save }: { event: Event; busy: boolean; save: (bo
   });
 
   return (
-    <form onSubmit={(e) => { e.preventDefault(); save(form); }} className="mt-6 grid gap-3 rounded-2xl bg-white p-5 md:grid-cols-2">
+    <form onSubmit={(e) => { e.preventDefault(); save(form); }} className="mt-6 grid gap-4 rounded-2xl bg-white p-5 md:grid-cols-2">
       <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Movie title" />
       <Input value={form.venueName} onChange={(e) => setForm({ ...form, venueName: e.target.value })} placeholder="Cinema name" />
       <Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder="City" />
       <Input type="datetime-local" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} />
-      <Input value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} placeholder="Poster image URL (https://...)" type="url" />
-      <Input value={form.trailerImageUrl} onChange={(e) => setForm({ ...form, trailerImageUrl: e.target.value })} placeholder="Trailer image URL (https://...)" type="url" />
+      <div className="md:col-span-2">
+        <ImageUploadField label="Movie poster image (drag or choose file)" name="imageUrl" value={form.imageUrl} onChange={(val) => setForm({ ...form, imageUrl: val })} placeholder="Paste image link (https://.../poster.jpg)" />
+      </div>
+      <div className="md:col-span-2">
+        <ImageUploadField label="Movie trailer image (optional)" name="trailerImageUrl" value={form.trailerImageUrl} onChange={(val) => setForm({ ...form, trailerImageUrl: val })} placeholder="Paste trailer thumbnail link (https://...)" />
+      </div>
       <Input value={form.trailerUrl} onChange={(e) => setForm({ ...form, trailerUrl: e.target.value })} placeholder="Trailer video link (YouTube URL)" type="url" className="md:col-span-2" />
       <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="min-h-24 rounded-xl border p-3 text-sm text-slate-950 md:col-span-2" placeholder="Movie description" />
       <Button disabled={busy} className="w-fit bg-violet-600 md:col-span-2">Save details</Button>

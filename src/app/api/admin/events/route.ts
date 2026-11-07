@@ -8,11 +8,26 @@ const seatPlan = [
   { name: "RECLINER", rows: 1, seats: 8, seatType: "VIP" as const, price: 570 },
 ];
 
-function sanitizeUrl(url?: unknown): string | null {
+function sanitizeImageUrl(url?: unknown): string | null {
+  if (typeof url !== "string") return null;
+  const trimmed = url.trim();
+  if (!trimmed) return null;
+  // Allow data:image/... base64 data URLs up to 4 MB
+  if (/^data:image\/(jpeg|jpg|png|webp|gif|avif);base64,/i.test(trimmed) && trimmed.length <= 4 * 1024 * 1024) {
+    return trimmed;
+  }
+  // Allow standard HTTP/HTTPS URLs up to 4096 chars
+  if (trimmed.length <= 4096 && /^https?:\/\/\S+$|^\/\S+$/i.test(trimmed)) {
+    return trimmed;
+  }
+  return null;
+}
+
+function sanitizeVideoUrl(url?: unknown): string | null {
   if (typeof url !== "string") return null;
   const trimmed = url.trim();
   if (!trimmed || trimmed.length > 2048) return null;
-  return /^https?:\/\/\S+$|^\/\S+$/i.test(trimmed) ? trimmed : null;
+  return /^https?:\/\/\S+$/i.test(trimmed) ? trimmed : null;
 }
 
 export async function POST(request: Request) {
@@ -24,9 +39,9 @@ export async function POST(request: Request) {
   const venueName = typeof body?.venueName === "string" ? body.venueName.trim() : "";
   const startTime = typeof body?.startTime === "string" ? new Date(body.startTime) : new Date("");
   const description = typeof body?.description === "string" ? body.description.trim() || null : null;
-  const imageUrl = sanitizeUrl(body?.imageUrl);
-  const trailerImageUrl = sanitizeUrl(body?.trailerImageUrl);
-  const trailerUrl = sanitizeUrl(body?.trailerUrl);
+  const imageUrl = sanitizeImageUrl(body?.imageUrl);
+  const trailerImageUrl = sanitizeImageUrl(body?.trailerImageUrl);
+  const trailerUrl = sanitizeVideoUrl(body?.trailerUrl);
 
   if (!name || !venueName || Number.isNaN(startTime.getTime()) || startTime <= new Date()) {
     return NextResponse.json({ error: "Add a movie title, venue, city, and a future start time." }, { status: 400 });
