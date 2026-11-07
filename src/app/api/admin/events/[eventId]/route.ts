@@ -85,3 +85,27 @@ export async function PATCH(request: Request, context: { params: Promise<{ event
   });
   return NextResponse.json({ ok: true });
 }
+
+export async function DELETE(request: Request, context: { params: Promise<{ eventId: string }> }) {
+  const organizer = await getOrganizer();
+  if (!organizer) return NextResponse.json({ error: "Organizer access is required." }, { status: 403 });
+  const { eventId } = await context.params;
+
+  const existing = await prisma.event.findFirst({
+    where: { id: eventId, ...(canManageAllEvents(organizer) ? {} : { organizerId: organizer.id }) },
+    select: { id: true, venueId: true },
+  });
+  if (!existing) return NextResponse.json({ error: "Showtime not found." }, { status: 404 });
+
+  try {
+    await prisma.ticket.deleteMany({ where: { ticketInventory: { eventId } } });
+    await prisma.orderItem.deleteMany({ where: { order: { eventId } } });
+    await prisma.order.deleteMany({ where: { eventId } });
+    await prisma.event.delete({ where: { id: eventId } });
+    await prisma.venue.delete({ where: { id: existing.venueId } }).catch(() => null);
+    return NextResponse.json({ ok: true, deleted: true });
+  } catch {
+    await prisma.event.update({ where: { id: eventId }, data: { status: "CANCELLED" } }).catch(() => null);
+    return NextResponse.json({ ok: true, cancelled: true });
+  }
+}
