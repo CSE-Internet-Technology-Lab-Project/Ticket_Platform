@@ -1,7 +1,6 @@
 import {
   createHmac,
   randomBytes,
-  randomUUID,
   timingSafeEqual,
 } from "crypto";
 import { NextResponse } from "next/server";
