@@ -1,5 +1,6 @@
 import {
   createHmac,
+  randomBytes,
   randomUUID,
   timingSafeEqual,
 } from "crypto";
@@ -479,9 +480,7 @@ export async function POST(request: Request) {
                 orderItemId: item.id,
                 ticketInventoryId:
                   item.ticketInventoryId,
-                ticketCode: `MOV-${randomUUID()
-                  .slice(0, 8)
-                  .toUpperCase()}`,
+                ticketCode: `MOV-${randomBytes(6).toString("hex").toUpperCase()}-${randomBytes(4).toString("hex").toUpperCase()}`,
               },
             });
           }

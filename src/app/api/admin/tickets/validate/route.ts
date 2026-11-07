@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getOrganizer } from "@/lib/current-user";
+import { canManageAllEvents, getOrganizer } from "@/lib/current-user";
 
 export async function POST(request: Request) {
   const organizer = await getOrganizer();
@@ -13,7 +13,10 @@ export async function POST(request: Request) {
   try {
     result = await prisma.$transaction(async (tx) => {
       const tickets = await tx.ticket.findMany({
-        where: { ticketCode: { in: ticketCodes }, orderItem: { order: { event: { organizerId: organizer.id } } } },
+        where: {
+          ticketCode: { in: ticketCodes },
+          ...(canManageAllEvents(organizer) ? {} : { orderItem: { order: { event: { organizerId: organizer.id } } } }),
+        },
         include: { orderItem: { include: { order: { include: { event: { select: { name: true, venue: { select: { name: true } } } }, user: { select: { name: true } } } } } }, ticketInventory: { include: { seat: { include: { section: { select: { name: true } } } } } } },
       });
       if (tickets.length !== ticketCodes.length) throw new Error("TICKET_NOT_FOUND");
