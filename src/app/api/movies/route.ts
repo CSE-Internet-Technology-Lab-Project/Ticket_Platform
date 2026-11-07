@@ -9,9 +9,10 @@ export async function GET() {
       venue: { select: { id: true, name: true, city: true } },
       ticketTypes: { select: { id: true, name: true, basePrice: true } },
       inventories: {
+        where: { status: "AVAILABLE" },
         select: {
-          id: true, currentPrice: true, status: true,
-          seat: { select: { id: true, rowNumber: true, seatNumber: true, seatType: true, section: { select: { name: true } } } },
+          currentPrice: true,
+          status: true,
         },
       },
     },

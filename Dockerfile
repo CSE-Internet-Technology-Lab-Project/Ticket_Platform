@@ -33,6 +33,9 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma7.config.ts ./prisma7.config.ts
 COPY --from=builder /app/tsconfig.json ./tsconfig.json
 
+RUN chown -R node:node /app
+USER node
+
 EXPOSE 3000
 
 CMD ["npm", "run", "start"]

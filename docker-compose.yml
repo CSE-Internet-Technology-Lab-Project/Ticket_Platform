@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: ticketing_password
       POSTGRES_DB: ticketing_db
     ports:
-      - "6000:5432"
+      - "127.0.0.1:6000:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -20,8 +20,8 @@ services:
       RABBITMQ_DEFAULT_USER: ticketing
       RABBITMQ_DEFAULT_PASS: ticketing_password
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
 
@@ -38,6 +38,8 @@ services:
       DATABASE_URL: postgresql://ticketing:ticketing_password@postgres:5432/ticketing_db?schema=public
       AUTH_SECRET: ${AUTH_SECRET:-development-only-secret-change-me}
       RABBITMQ_URL: amqp://ticketing:ticketing_password@rabbitmq:5672
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
     ports:
       - "3000:3000"
 
