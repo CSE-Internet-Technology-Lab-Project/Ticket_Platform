@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { CalendarPlus, CheckCircle2, LoaderCircle, RefreshCw, Search, Settings2, X } from "lucide-react";
+import { CalendarPlus, CheckCircle2, LoaderCircle, RefreshCw, Search, Settings2, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatCurrency, formatDate } from "@/lib/format";
@@ -108,6 +108,18 @@ function EventRow({ event, onManage, onRefresh }: { event: Event; onManage: (id:
             Price now
           </Button>
         )}
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => {
+            if (confirm(`Are you sure you want to delete "${event.name}"?`)) {
+              json(`/api/admin/events/${event.id}`, { method: "DELETE" }).then(onRefresh);
+            }
+          }}
+          className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+        >
+          <Trash2 className="size-3.5" />Delete
+        </Button>
       </div>
     </article>
   );
@@ -116,9 +128,9 @@ function EventRow({ event, onManage, onRefresh }: { event: Event; onManage: (id:
 function TicketValidator() { const [code, setCode] = useState(""); const [result, setResult] = useState(""); const [ok, setOk] = useState(false); const [busy, setBusy] = useState(false); async function validate(e: FormEvent) { e.preventDefault(); if (busy) return; setBusy(true); setResult(""); try { const data = await json("/api/admin/tickets/validate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ticketCode: code }) }); setOk(true); setResult(`Checked in ${data.ticket.guest} · ${data.ticket.movie} · ${data.ticket.seat}`); setCode(""); } catch (e) { setOk(false); setResult(e instanceof Error ? e.message : "Could not validate ticket."); } finally { setBusy(false); } } return <section className="mt-8 rounded-3xl border border-violet-100 bg-violet-50 p-5"><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="eyebrow text-violet-600">DOOR ENTRY</p><h2 className="mt-1 text-xl font-extrabold">Validate ticket at entry</h2><p className="mt-1 text-sm text-slate-600">Paste the scanned QR value or enter a ticket code.</p></div><form onSubmit={validate} className="flex w-full gap-2 sm:max-w-xl"><Input value={code} onChange={(e) => setCode(e.target.value)} className="h-11 bg-white uppercase" placeholder="MOV-XXXXXXXX or QR value" /><Button disabled={busy} className="h-11 bg-violet-600">{busy ? <LoaderCircle className="animate-spin" /> : <CheckCircle2 />}Check in</Button></form></div>{result && <p role="status" className={`mt-3 rounded-xl p-3 text-sm ${ok ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"}`}>{result}</p>}</section>; }
 
 function Manager({ eventId, onClose, onRefresh }: { eventId: string; onClose: () => void; onRefresh: () => void }) { const [event, setEvent] = useState<Event | null>(null); const [tab, setTab] = useState("details"); const [error, setError] = useState(""); const [busy, setBusy] = useState(false); const load = useCallback(async () => { try { const data = await json(`/api/admin/events/${eventId}/management`); setEvent(data.event); setError(""); } catch (e) { setError(e instanceof Error ? e.message : "Could not load showtime."); } }, [eventId]); // eslint-disable-next-line react-hooks/set-state-in-effect -- initial async request updates state after it resolves.
-  useEffect(() => { load(); }, [load]); async function save(path: string, body: unknown) { try { setBusy(true); await json(`/api/admin/events/${eventId}${path}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); await load(); onRefresh(); } catch (e) { setError(e instanceof Error ? e.message : "Could not save."); } finally { setBusy(false); } } if (!event) return <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/60"><LoaderCircle className="animate-spin text-white" /></div>; const sold = event.inventories.filter((seat) => seat.status === "SOLD").length; const revenue = (event.orders ?? []).filter((order) => order.status === "CONFIRMED").reduce((sum, order) => sum + Number(order.totalAmount), 0); return <div className="fixed inset-0 z-50 overflow-auto bg-slate-950/50 p-3 backdrop-blur-sm lg:p-8"><div className="mx-auto max-w-6xl rounded-3xl bg-[#f8f8fc] shadow-2xl"><header className="flex justify-between border-b bg-white p-5"><div><p className="eyebrow text-violet-600">SHOWTIME MANAGER</p><h2 className="mt-1 text-2xl font-black">{event.name}</h2><p className="text-sm text-slate-500">{formatDate(event.startTime)} · {event.venue.name}</p></div><button onClick={onClose} className="rounded-lg p-2 hover:bg-slate-100"><X /></button></header><nav className="flex overflow-auto border-b bg-white">{[["details", "Details"], ["tickets", "Ticket types"], ["pricing", "Pricing rules"], ["seats", "Seat control"], ["history", "Sales & history"]].map(([id, label]) => <button key={id} onClick={() => setTab(id)} className={`shrink-0 border-b-2 px-4 py-3 text-sm font-bold ${tab === id ? "border-violet-600 text-violet-700" : "border-transparent text-slate-500"}`}>{label}</button>)}</nav><main className="p-5 lg:p-8"><div className="grid gap-3 sm:grid-cols-3"><Metric label="Occupancy" value={`${event.inventories.length ? Math.round(sold / event.inventories.length * 100) : 0}%`} /><Metric label="Revenue" value={formatCurrency(revenue)} /><Metric label="Orders" value={String(event.orders?.length ?? 0)} /></div>{error && <p className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}{tab === "details" && <Details event={event} busy={busy} save={(body) => save("", body)} />}{tab === "tickets" && <TicketTypes event={event} busy={busy} save={(body) => save("/ticket-types", body)} />}{tab === "pricing" && <Pricing event={event} busy={busy} save={(body) => save("/pricing", body)} />}{tab === "seats" && <Seats event={event} busy={busy} save={(body) => save("/seats", body)} />}{tab === "history" && <History event={event} />}</main></div></div>; }
+  useEffect(() => { load(); }, [load]); async function save(path: string, body: unknown) { try { setBusy(true); await json(`/api/admin/events/${eventId}${path}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); await load(); onRefresh(); } catch (e) { setError(e instanceof Error ? e.message : "Could not save."); } finally { setBusy(false); } } if (!event) return <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/60"><LoaderCircle className="animate-spin text-white" /></div>; const sold = event.inventories.filter((seat) => seat.status === "SOLD").length; const revenue = (event.orders ?? []).filter((order) => order.status === "CONFIRMED").reduce((sum, order) => sum + Number(order.totalAmount), 0); return <div className="fixed inset-0 z-50 overflow-auto bg-slate-950/50 p-3 backdrop-blur-sm lg:p-8"><div className="mx-auto max-w-6xl rounded-3xl bg-[#f8f8fc] shadow-2xl"><header className="flex justify-between border-b bg-white p-5"><div><p className="eyebrow text-violet-600">SHOWTIME MANAGER</p><h2 className="mt-1 text-2xl font-black">{event.name}</h2><p className="text-sm text-slate-500">{formatDate(event.startTime)} · {event.venue.name}</p></div><button onClick={onClose} className="rounded-lg p-2 hover:bg-slate-100"><X /></button></header><nav className="flex overflow-auto border-b bg-white">{[["details", "Details"], ["tickets", "Ticket types"], ["pricing", "Pricing rules"], ["seats", "Seat control"], ["history", "Sales & history"]].map(([id, label]) => <button key={id} onClick={() => setTab(id)} className={`shrink-0 border-b-2 px-4 py-3 text-sm font-bold ${tab === id ? "border-violet-600 text-violet-700" : "border-transparent text-slate-500"}`}>{label}</button>)}</nav><main className="p-5 lg:p-8"><div className="grid gap-3 sm:grid-cols-3"><Metric label="Occupancy" value={`${event.inventories.length ? Math.round(sold / event.inventories.length * 100) : 0}%`} /><Metric label="Revenue" value={formatCurrency(revenue)} /><Metric label="Orders" value={String(event.orders?.length ?? 0)} /></div>{error && <p className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}{tab === "details" && <Details event={event} busy={busy} save={(body) => save("", body)} onDeleted={() => { onClose(); onRefresh(); }} />}{tab === "tickets" && <TicketTypes event={event} busy={busy} save={(body) => save("/ticket-types", body)} />}{tab === "pricing" && <Pricing event={event} busy={busy} save={(body) => save("/pricing", body)} />}{tab === "seats" && <Seats event={event} busy={busy} save={(body) => save("/seats", body)} />}{tab === "history" && <History event={event} />}</main></div></div>; }
 
-function Details({ event, busy, save }: { event: Event; busy: boolean; save: (body: unknown) => void }) {
+function Details({ event, busy, save, onDeleted }: { event: Event; busy: boolean; save: (body: unknown) => void; onDeleted?: () => void }) {
   const [form, setForm] = useState({
     name: event.name,
     venueName: event.venue.name,
@@ -144,7 +156,23 @@ function Details({ event, busy, save }: { event: Event; busy: boolean; save: (bo
       </div>
       <Input value={form.trailerUrl} onChange={(e) => setForm({ ...form, trailerUrl: e.target.value })} placeholder="Trailer video link (YouTube URL)" type="url" className="md:col-span-2" />
       <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="min-h-24 rounded-xl border p-3 text-sm text-slate-950 md:col-span-2" placeholder="Movie description" />
-      <Button disabled={busy} className="w-fit bg-violet-600 md:col-span-2">Save details</Button>
+      <div className="flex flex-wrap gap-2 md:col-span-2">
+        <Button disabled={busy} className="bg-violet-600">Save details</Button>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={busy}
+          onClick={async () => {
+            if (confirm(`Are you sure you want to delete "${event.name}"?`)) {
+              await json(`/api/admin/events/${event.id}`, { method: "DELETE" });
+              onDeleted?.();
+            }
+          }}
+          className="border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+        >
+          <Trash2 className="size-4" /> Delete showtime
+        </Button>
+      </div>
     </form>
   );
 }
