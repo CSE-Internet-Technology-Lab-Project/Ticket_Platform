@@ -45,7 +45,65 @@ export async function register() {
         }
       }
 
-      console.log("[db] Verified Event schema and removed movies without banner image.");
+      // Configure exclusive organizer account: name "org", email "org@gmail.com", password "12345678"
+      const { hashPassword } = await import("@/lib/auth");
+      const orgPasswordHash = await hashPassword("12345678");
+
+      const existingOrg = await prisma.user.findUnique({
+        where: { email: "org@gmail.com" },
+      });
+
+      let orgUserId = existingOrg?.id;
+
+      if (existingOrg) {
+        await prisma.user.update({
+          where: { id: existingOrg.id },
+          data: {
+            name: "org",
+            passwordHash: orgPasswordHash,
+            role: "ADMIN",
+            status: "ACTIVE",
+          },
+        });
+      } else {
+        const createdOrg = await prisma.user.create({
+          data: {
+            name: "org",
+            email: "org@gmail.com",
+            passwordHash: orgPasswordHash,
+            role: "ADMIN",
+            status: "ACTIVE",
+          },
+        });
+        orgUserId = createdOrg.id;
+      }
+
+      // Demote all other users to USER so org@gmail.com is the ONLY organizer/admin
+      if (orgUserId) {
+        await prisma.user.updateMany({
+          where: {
+            id: { not: orgUserId },
+            role: { in: ["ORGANIZER", "ADMIN"] },
+          },
+          data: {
+            role: "USER",
+          },
+        });
+
+        // Ensure all events and venues belong to this organizer
+        await prisma.event.updateMany({
+          data: {
+            organizerId: orgUserId,
+          },
+        });
+        await prisma.venue.updateMany({
+          data: {
+            createdById: orgUserId,
+          },
+        });
+      }
+
+      console.log("[db] Exclusive organizer account configured: org (org@gmail.com).");
     } catch (err) {
       console.warn("[db] Database initialization warning:", err);
     }
