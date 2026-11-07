@@ -16,7 +16,10 @@ export async function POST(request: Request) {
   const city = typeof body?.city === "string" ? body.city.trim() : "Bengaluru";
   const venueName = typeof body?.venueName === "string" ? body.venueName.trim() : "";
   const startTime = typeof body?.startTime === "string" ? new Date(body.startTime) : new Date("");
-  const description = typeof body?.description === "string" ? body.description.trim() : null;
+  const description = typeof body?.description === "string" ? body.description.trim() || null : null;
+  const rawImageUrl = typeof body?.imageUrl === "string" ? body.imageUrl.trim() : "";
+  const imageUrl = rawImageUrl && /^https?:\/\/\S+$|^\/\S+$/i.test(rawImageUrl) && rawImageUrl.length <= 2048 ? rawImageUrl : null;
+
   if (!name || !venueName || Number.isNaN(startTime.getTime()) || startTime <= new Date()) {
     return NextResponse.json({ error: "Add a movie title, venue, city, and a future start time." }, { status: 400 });
   }
@@ -27,7 +30,7 @@ export async function POST(request: Request) {
     const sections = await Promise.all(seatPlan.map((section) => tx.venueSection.create({ data: { venueId: venue.id, name: section.name, capacity: section.rows * section.seats } })));
     const event = await tx.event.create({
       data: {
-        organizerId: organizer.id, venueId: venue.id, name, description, type: "MOVIE", startTime,
+        organizerId: organizer.id, venueId: venue.id, name, description, imageUrl, type: "MOVIE", startTime,
         endTime: new Date(startTime.getTime() + 135 * 60 * 1000), status: "DRAFT",
       },
     });

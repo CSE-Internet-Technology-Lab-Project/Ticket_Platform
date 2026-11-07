@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { formatCurrency, formatDate } from "@/lib/format";
 
 type Inventory = { id: string; currentPrice: string | number; status: "AVAILABLE" | "HELD" | "SOLD" | "BLOCKED"; seat: { rowNumber: number; seatNumber: number; section: { name: string } } };
-type Movie = { id: string; name: string; description: string | null; startTime: string; endTime: string; venue: { name: string; address: string; city: string }; pricingPolicy: { enabled: boolean; rules: { name: string }[] } | null; inventories: Inventory[] };
+type Movie = { id: string; name: string; description: string | null; imageUrl?: string | null; startTime: string; endTime: string; venue: { name: string; address: string; city: string }; pricingPolicy: { enabled: boolean; rules: { name: string }[] } | null; inventories: Inventory[] };
 
 export function MovieBookingPage({ eventId }: { eventId: string }) {
   const router = useRouter(); const [movie, setMovie] = useState<Movie | null>(null); const [selected, setSelected] = useState<string[]>([]); const [pending, setPending] = useState(false); const [error, setError] = useState("");
@@ -19,7 +19,65 @@ export function MovieBookingPage({ eventId }: { eventId: string }) {
   async function reserve() { if (!movie || !selected.length) return; setPending(true); setError(""); const response = await fetch("/api/reservations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ eventId: movie.id, inventoryIds: selected }) }); const data = await response.json().catch(() => ({})); setPending(false); if (response.status === 401) { window.dispatchEvent(new Event("showtime:auth")); setError("Sign in or create an account, then reserve your seats."); return; } if (!response.ok) { setError(data.error ?? "Those seats are no longer available."); return; } router.push(`/checkout/${data.reservation.id}`); }
   if (error && !movie) return <main className="mx-auto max-w-xl px-5 py-24 text-center"><h1 className="text-3xl font-extrabold">Showtime unavailable</h1><p className="mt-3 text-slate-500">{error}</p><Link href="/"><Button className="mt-6 rounded-xl bg-violet-600">Browse movies</Button></Link></main>;
   if (!movie) return <main className="mx-auto grid min-h-[60vh] place-items-center"><LoaderCircle className="size-7 animate-spin text-violet-600" /></main>;
-  return <main className="mx-auto max-w-7xl px-5 py-8 lg:px-8 lg:py-12"><Link href="/" className="inline-flex items-center gap-1 text-sm font-bold text-slate-500 hover:text-slate-950"><ArrowLeft className="size-4" />All movies</Link><div className="mt-7 grid gap-8 lg:grid-cols-[1fr_360px]"><div><p className="eyebrow text-violet-600">SELECT YOUR SEATS</p><h1 className="mt-2 text-4xl font-extrabold tracking-[-.055em]">{movie.name}</h1><p className="mt-3 max-w-2xl leading-7 text-slate-500">{movie.description ?? "Your movie night starts with the perfect seat."}</p><div className="mt-6 flex flex-wrap gap-x-5 gap-y-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600"><span className="flex items-center gap-2"><CalendarDays className="size-4 text-violet-600" />{formatDate(movie.startTime)}</span><span className="flex items-center gap-2"><Clock3 className="size-4 text-violet-600" />{Math.round((new Date(movie.endTime).getTime() - new Date(movie.startTime).getTime()) / 60000)} min</span><span className="flex items-center gap-2"><MapPin className="size-4 text-violet-600" />{movie.venue.name}, {movie.venue.city}</span></div><SeatMap inventories={movie.inventories} selected={selected} onToggle={toggle} /></div><aside className="h-fit rounded-3xl border border-slate-200 bg-white p-6 shadow-sm lg:sticky lg:top-24"><p className="eyebrow text-violet-600">YOUR BOOKING</p><h2 className="mt-2 text-xl font-extrabold">{selected.length ? `${selected.length} seat${selected.length > 1 ? "s" : ""} selected` : "Choose your seats"}</h2><div className="my-5 border-t border-dashed border-slate-300" /><div className="space-y-3 text-sm">{selectedSeats.length ? selectedSeats.map((item) => <div key={item.id} className="flex justify-between"><span className="font-semibold">{seatLabel(item)}</span><span>{formatCurrency(Number(item.currentPrice))}</span></div>) : <p className="leading-6 text-slate-500">Pick up to six seats from the live seating map.</p>}</div><div className="my-5 border-t border-dashed border-slate-300" /><div className="flex items-end justify-between"><span className="font-bold">Total</span><span className="text-2xl font-black tracking-tight">{formatCurrency(total)}</span></div><p className="mt-1 text-xs text-slate-400">All taxes included</p>{movie.pricingPolicy?.enabled && <p className="mt-5 flex gap-2 rounded-xl bg-violet-50 p-3 text-xs leading-5 text-violet-800"><Info className="mt-0.5 size-4 shrink-0" />Prices update fairly with availability{movie.pricingPolicy.rules.length ? ` · ${movie.pricingPolicy.rules.map((rule) => rule.name).join(", ")}` : ""}.</p>}{error && <p role="alert" className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}<Button disabled={!selected.length || pending} onClick={reserve} className="mt-5 h-11 w-full rounded-xl bg-violet-600 hover:bg-violet-700">{pending ? <LoaderCircle className="animate-spin" /> : <Ticket />}Reserve seats</Button></aside></div></main>;
+  return (
+    <main className="mx-auto max-w-7xl px-5 py-8 lg:px-8 lg:py-12">
+      <Link href="/" className="inline-flex items-center gap-1 text-sm font-bold text-slate-500 hover:text-slate-950">
+        <ArrowLeft className="size-4" />All movies
+      </Link>
+      <div className="mt-7 grid gap-8 lg:grid-cols-[1fr_360px]">
+        <div>
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
+            {movie.imageUrl && (
+              <div className="relative h-44 w-32 shrink-0 overflow-hidden rounded-2xl border border-slate-200 shadow-md">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={movie.imageUrl} alt={movie.name} className="h-full w-full object-cover" />
+              </div>
+            )}
+            <div className="flex-1">
+              <p className="eyebrow text-violet-600">SELECT YOUR SEATS</p>
+              <h1 className="mt-2 text-4xl font-extrabold tracking-[-.055em]">{movie.name}</h1>
+              <p className="mt-3 max-w-2xl leading-7 text-slate-500">{movie.description ?? "Your movie night starts with the perfect seat."}</p>
+              <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+                <span className="flex items-center gap-2"><CalendarDays className="size-4 text-violet-600" />{formatDate(movie.startTime)}</span>
+                <span className="flex items-center gap-2"><Clock3 className="size-4 text-violet-600" />{Math.round((new Date(movie.endTime).getTime() - new Date(movie.startTime).getTime()) / 60000)} min</span>
+                <span className="flex items-center gap-2"><MapPin className="size-4 text-violet-600" />{movie.venue.name}, {movie.venue.city}</span>
+              </div>
+            </div>
+          </div>
+          <SeatMap inventories={movie.inventories} selected={selected} onToggle={toggle} />
+        </div>
+        <aside className="h-fit rounded-3xl border border-slate-200 bg-white p-6 shadow-sm lg:sticky lg:top-24">
+          <p className="eyebrow text-violet-600">YOUR BOOKING</p>
+          <h2 className="mt-2 text-xl font-extrabold">{selected.length ? `${selected.length} seat${selected.length > 1 ? "s" : ""} selected` : "Choose your seats"}</h2>
+          <div className="my-5 border-t border-dashed border-slate-300" />
+          <div className="space-y-3 text-sm">
+            {selectedSeats.length ? selectedSeats.map((item) => (
+              <div key={item.id} className="flex justify-between">
+                <span className="font-semibold">{seatLabel(item)}</span>
+                <span>{formatCurrency(Number(item.currentPrice))}</span>
+              </div>
+            )) : <p className="leading-6 text-slate-500">Pick up to six seats from the live seating map.</p>}
+          </div>
+          <div className="my-5 border-t border-dashed border-slate-300" />
+          <div className="flex items-end justify-between">
+            <span className="font-bold">Total</span>
+            <span className="text-2xl font-black tracking-tight">{formatCurrency(total)}</span>
+          </div>
+          <p className="mt-1 text-xs text-slate-400">All taxes included</p>
+          {movie.pricingPolicy?.enabled && (
+            <p className="mt-5 flex gap-2 rounded-xl bg-violet-50 p-3 text-xs leading-5 text-violet-800">
+              <Info className="mt-0.5 size-4 shrink-0" />
+              Prices update fairly with availability{movie.pricingPolicy.rules.length ? ` · ${movie.pricingPolicy.rules.map((rule) => rule.name).join(", ")}` : ""}.
+            </p>
+          )}
+          {error && <p role="alert" className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
+          <Button disabled={!selected.length || pending} onClick={reserve} className="mt-5 h-11 w-full rounded-xl bg-violet-600 hover:bg-violet-700">
+            {pending ? <LoaderCircle className="animate-spin" /> : <Ticket />}Reserve seats
+          </Button>
+        </aside>
+      </div>
+    </main>
+  );
 }
 
 function SeatMap({ inventories, selected, onToggle }: { inventories: Inventory[]; selected: string[]; onToggle: (id: string) => void }) { const sections = [...new Set(inventories.map((item) => item.seat.section.name))]; return <section className="mt-8 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm"><div className="border-b border-slate-100 bg-slate-50 px-5 py-4"><p className="text-sm font-bold">{inventories.length} live seats</p><p className="mt-1 text-xs text-slate-500">Selected seats are held only after you continue.</p></div><div className="overflow-x-auto px-5 py-8"><div className="min-w-[600px]"><div className="mx-auto mb-10 h-10 w-3/4 rounded-[100%] border-t-8 border-violet-200 text-center text-xs font-bold tracking-[.3em] text-slate-400">SCREEN</div>{sections.map((section) => <Section key={section} name={section} seats={inventories.filter((item) => item.seat.section.name === section)} selected={selected} onToggle={onToggle} />)}</div></div><div className="flex flex-wrap justify-center gap-5 border-t border-slate-100 bg-slate-50 px-5 py-3 text-xs text-slate-500"><Legend className="border-emerald-500 bg-white" label="Available" /><Legend className="border-violet-600 bg-violet-600" label="Selected" /><Legend className="border-slate-200 bg-slate-200" label="Unavailable" /></div></section>; }
