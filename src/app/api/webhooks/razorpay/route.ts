@@ -1,6 +1,29 @@
 import { createHmac, randomBytes, timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
+import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
+
+type RazorpayWebhookPayload = {
+  id?: string;
+  event?: string;
+  payload?: {
+    payment?: {
+      entity?: {
+        id?: string;
+        order_id?: string;
+        amount?: number;
+        status?: string;
+      };
+    };
+    order?: {
+      entity?: {
+        id?: string;
+        receipt?: string;
+        notes?: Record<string, string>;
+      };
+    };
+  };
+};
 
 function verifyWebhookSignature(bodyText: string, signature: string): boolean {
   const secret = process.env.RAZORPAY_WEBHOOK_SECRET || process.env.RAZORPAY_KEY_SECRET;
@@ -26,21 +49,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
-  let event: any;
+  let event: RazorpayWebhookPayload;
   try {
-    event = JSON.parse(rawBody);
+    event = JSON.parse(rawBody) as RazorpayWebhookPayload;
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const webhookEventId = (event.id as string) || `wh_${Date.now()}_${randomBytes(4).toString("hex")}`;
-  const eventType = event.event as string;
+  const webhookEventId = event.id || `wh_${Date.now()}_${randomBytes(4).toString("hex")}`;
+  const eventType = event.event;
 
   // Process payment confirmation events
   if (eventType === "payment.captured" || eventType === "order.paid") {
     const paymentEntity = event.payload?.payment?.entity;
-    const razorpayPaymentId = paymentEntity?.id as string | undefined;
-    const razorpayOrderId = paymentEntity?.order_id as string | undefined;
+    const razorpayPaymentId = paymentEntity?.id;
+    const razorpayOrderId = paymentEntity?.order_id;
 
     if (!razorpayOrderId) {
       return NextResponse.json({ received: true, note: "No razorpay order_id in payload" });
@@ -79,11 +102,13 @@ export async function POST(request: Request) {
             },
           });
 
+          const jsonPayload = event as unknown as Prisma.InputJsonValue;
+
           if (!attempt || !attempt.payment?.order) {
             console.warn(`Webhook: No internal order found for razorpayOrderId ${razorpayOrderId}`);
             await tx.paymentWebhook.upsert({
               where: { provider_eventId: { provider: "RAZORPAY", eventId: webhookEventId } },
-              create: { provider: "RAZORPAY", eventId: webhookEventId, payload: event, processed: false },
+              create: { provider: "RAZORPAY", eventId: webhookEventId, payload: jsonPayload, processed: false },
               update: {},
             });
             return;
@@ -94,7 +119,7 @@ export async function POST(request: Request) {
             // Already confirmed by client route, mark webhook processed
             await tx.paymentWebhook.upsert({
               where: { provider_eventId: { provider: "RAZORPAY", eventId: webhookEventId } },
-              create: { provider: "RAZORPAY", eventId: webhookEventId, payload: event, processed: true, processedAt: new Date() },
+              create: { provider: "RAZORPAY", eventId: webhookEventId, payload: jsonPayload, processed: true, processedAt: new Date() },
               update: { processed: true, processedAt: new Date() },
             });
             return;
@@ -175,7 +200,7 @@ export async function POST(request: Request) {
 
           await tx.paymentWebhook.upsert({
             where: { provider_eventId: { provider: "RAZORPAY", eventId: webhookEventId } },
-            create: { provider: "RAZORPAY", eventId: webhookEventId, payload: event, processed: true, processedAt: new Date() },
+            create: { provider: "RAZORPAY", eventId: webhookEventId, payload: jsonPayload, processed: true, processedAt: new Date() },
             update: { processed: true, processedAt: new Date() },
           });
         },

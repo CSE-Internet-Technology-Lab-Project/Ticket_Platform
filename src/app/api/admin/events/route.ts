@@ -8,6 +8,13 @@ const seatPlan = [
   { name: "RECLINER", rows: 1, seats: 8, seatType: "VIP" as const, price: 570 },
 ];
 
+function sanitizeUrl(url?: unknown): string | null {
+  if (typeof url !== "string") return null;
+  const trimmed = url.trim();
+  if (!trimmed || trimmed.length > 2048) return null;
+  return /^https?:\/\/\S+$|^\/\S+$/i.test(trimmed) ? trimmed : null;
+}
+
 export async function POST(request: Request) {
   const organizer = await getOrganizer();
   if (!organizer) return NextResponse.json({ error: "Organizer access is required." }, { status: 403 });
@@ -16,7 +23,11 @@ export async function POST(request: Request) {
   const city = typeof body?.city === "string" ? body.city.trim() : "Bengaluru";
   const venueName = typeof body?.venueName === "string" ? body.venueName.trim() : "";
   const startTime = typeof body?.startTime === "string" ? new Date(body.startTime) : new Date("");
-  const description = typeof body?.description === "string" ? body.description.trim() : null;
+  const description = typeof body?.description === "string" ? body.description.trim() || null : null;
+  const imageUrl = sanitizeUrl(body?.imageUrl);
+  const trailerImageUrl = sanitizeUrl(body?.trailerImageUrl);
+  const trailerUrl = sanitizeUrl(body?.trailerUrl);
+
   if (!name || !venueName || Number.isNaN(startTime.getTime()) || startTime <= new Date()) {
     return NextResponse.json({ error: "Add a movie title, venue, city, and a future start time." }, { status: 400 });
   }
@@ -27,7 +38,7 @@ export async function POST(request: Request) {
     const sections = await Promise.all(seatPlan.map((section) => tx.venueSection.create({ data: { venueId: venue.id, name: section.name, capacity: section.rows * section.seats } })));
     const event = await tx.event.create({
       data: {
-        organizerId: organizer.id, venueId: venue.id, name, description, type: "MOVIE", startTime,
+        organizerId: organizer.id, venueId: venue.id, name, description, imageUrl, trailerImageUrl, trailerUrl, type: "MOVIE", startTime,
         endTime: new Date(startTime.getTime() + 135 * 60 * 1000), status: "DRAFT",
       },
     });

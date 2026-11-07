@@ -268,6 +268,9 @@ model Event {
 
   name        String
   description String?
+  imageUrl        String?
+  trailerImageUrl String?
+  trailerUrl      String?
   type        EventType
   startTime   DateTime
   endTime     DateTime
