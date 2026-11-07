@@ -26,6 +26,43 @@ Showtime is a production-grade, distributed movie ticketing platform built to ha
 
 ---
 
+## 📸 Platform Walkthrough & Screenshots
+
+### 1. Theatrical Landing Page & Cinema Spotlight
+The responsive home showcase features interactive cinema spotlighting, real-time movie lineup cards, video trailer modal triggers, and in-hero showtime search.
+
+![Theatrical Landing Page & Cinema Spotlight](docs/screenshots/01-hero-showcase.jpg)
+
+---
+
+### 2. Live Screening Catalog
+The movie catalog displays published titles with uploaded custom posters, venue information, format tags (Dolby Atmos / 4K), and dynamic starting prices.
+
+![Live Screening Catalog](docs/screenshots/02-movie-catalog.jpg)
+
+---
+
+### 3. Interactive Seat Selection & Real-Time Dynamic Pricing
+Visual seat map divided into VIP Recliner, Prime, and Classic tiers. As seats fill or showtime approaches, the dynamic pricing engine recalculates prices with transparent rule explanations.
+
+![Interactive Seat Selection & Real-Time Dynamic Pricing](docs/screenshots/03-seat-selection.png)
+
+---
+
+### 4. Razorpay Payment Gateway Integration
+Zero-trust payment flow: order totals are computed exclusively server-side, with HMAC-SHA256 signature verification and timing-attack protection.
+
+![Razorpay Payment Gateway Integration](docs/screenshots/04-razorpay-checkout.png)
+
+---
+
+### 5. Instant Admission QR Ticket Pass
+Once payment is verified, the order is confirmed and a scannable entrance QR pass is generated for admission validation at the cinema door.
+
+![Instant Admission QR Ticket Pass](docs/screenshots/05-qr-ticket-pass.png)
+
+---
+
 ## 🛠️ Core Engineering Highlights
 
 ### 1. Concurrency Control & Double-Booking Elimination
