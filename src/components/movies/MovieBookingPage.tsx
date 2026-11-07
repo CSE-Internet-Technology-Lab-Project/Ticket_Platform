@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, CalendarDays, Check, Clock3, Info, LoaderCircle, MapPin, Ticket } from "lucide-react";
+import { ArrowLeft, CalendarDays, Check, Clock3, ExternalLink, Info, LoaderCircle, MapPin, Play, Ticket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatCurrency, formatDate } from "@/lib/format";
 
 type Inventory = { id: string; currentPrice: string | number; status: "AVAILABLE" | "HELD" | "SOLD" | "BLOCKED"; seat: { rowNumber: number; seatNumber: number; section: { name: string } } };
-type Movie = { id: string; name: string; description: string | null; imageUrl?: string | null; startTime: string; endTime: string; venue: { name: string; address: string; city: string }; pricingPolicy: { enabled: boolean; rules: { name: string }[] } | null; inventories: Inventory[] };
+type Movie = { id: string; name: string; description: string | null; imageUrl?: string | null; trailerImageUrl?: string | null; trailerUrl?: string | null; startTime: string; endTime: string; venue: { name: string; address: string; city: string }; pricingPolicy: { enabled: boolean; rules: { name: string }[] } | null; inventories: Inventory[] };
 
 export function MovieBookingPage({ eventId }: { eventId: string }) {
   const router = useRouter(); const [movie, setMovie] = useState<Movie | null>(null); const [selected, setSelected] = useState<string[]>([]); const [pending, setPending] = useState(false); const [error, setError] = useState("");
@@ -27,10 +27,10 @@ export function MovieBookingPage({ eventId }: { eventId: string }) {
       <div className="mt-7 grid gap-8 lg:grid-cols-[1fr_360px]">
         <div>
           <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
-            {movie.imageUrl && (
-              <div className="relative h-44 w-32 shrink-0 overflow-hidden rounded-2xl border border-slate-200 shadow-md">
+            {(movie.imageUrl || movie.trailerImageUrl) && (
+              <div className="relative h-48 w-36 shrink-0 overflow-hidden rounded-2xl border border-slate-200 shadow-md">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={movie.imageUrl} alt={movie.name} className="h-full w-full object-cover" />
+                <img src={movie.imageUrl || movie.trailerImageUrl!} alt={movie.name} className="h-full w-full object-cover" />
               </div>
             )}
             <div className="flex-1">
@@ -41,6 +41,11 @@ export function MovieBookingPage({ eventId }: { eventId: string }) {
                 <span className="flex items-center gap-2"><CalendarDays className="size-4 text-violet-600" />{formatDate(movie.startTime)}</span>
                 <span className="flex items-center gap-2"><Clock3 className="size-4 text-violet-600" />{Math.round((new Date(movie.endTime).getTime() - new Date(movie.startTime).getTime()) / 60000)} min</span>
                 <span className="flex items-center gap-2"><MapPin className="size-4 text-violet-600" />{movie.venue.name}, {movie.venue.city}</span>
+                {movie.trailerUrl && (
+                  <a href={movie.trailerUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 font-bold text-violet-600 hover:underline">
+                    <Play className="size-3.5 fill-violet-600" />Watch trailer <ExternalLink className="size-3" />
+                  </a>
+                )}
               </div>
             </div>
           </div>

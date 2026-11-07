@@ -8,7 +8,7 @@ import { formatCurrency, formatDate } from "@/lib/format";
 
 type Status = "AVAILABLE" | "HELD" | "SOLD" | "BLOCKED";
 type Rule = { id?: string; name: string; type: string; adjustmentType: string; adjustmentValue: string | number; conditions: Record<string, unknown>; priority: number; enabled: boolean; ticketTypeId: string | null };
-type Event = { id: string; name: string; description: string | null; imageUrl?: string | null; startTime: string; endTime?: string; status: string; venue: { name: string; city: string }; ticketTypes: { id: string; name: string; description?: string | null; basePrice: string | number; quantity: number }[]; inventories: { id?: string; status: Status; currentPrice: string | number; seat?: { rowNumber: number; seatNumber: number; section: { name: string } }; priceHistory?: { id: string; price: string | number; reason: string; createdAt: string }[] }[]; pricingPolicy: { enabled: boolean; minimumPrice: string | number | null; maximumPrice: string | number | null; rules: Rule[] } | null; _count?: { orders: number }; orders?: { id: string; totalAmount: string | number; status: string; createdAt: string; user: { name: string; email: string }; items: unknown[] }[] };
+type Event = { id: string; name: string; description: string | null; imageUrl?: string | null; trailerImageUrl?: string | null; trailerUrl?: string | null; startTime: string; endTime?: string; status: string; venue: { name: string; city: string }; ticketTypes: { id: string; name: string; description?: string | null; basePrice: string | number; quantity: number }[]; inventories: { id?: string; status: Status; currentPrice: string | number; seat?: { rowNumber: number; seatNumber: number; section: { name: string } }; priceHistory?: { id: string; price: string | number; reason: string; createdAt: string }[] }[]; pricingPolicy: { enabled: boolean; minimumPrice: string | number | null; maximumPrice: string | number | null; rules: Rule[] } | null; _count?: { orders: number }; orders?: { id: string; totalAmount: string | number; status: string; createdAt: string; user: { name: string; email: string }; items: unknown[] }[] };
 type Dashboard = { organizer: { name: string }; events: Event[] };
 
 async function json(url: string, options?: RequestInit) { const response = await fetch(url, options); const data = await response.json().catch(() => ({})); if (!response.ok) throw new Error(data.error ?? "Request failed."); return data; }
@@ -28,7 +28,31 @@ export function AdminDashboard() {
 function CreateShowtime({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const [busy, setBusy] = useState(false); const [error, setError] = useState(""); const [minimumStartTime] = useState(() => { const now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset()); return now.toISOString().slice(0, 16); });
   async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); setBusy(true); setError(""); const values = Object.fromEntries(new FormData(event.currentTarget)); try { await json("/api/admin/events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(values) }); onClose(); onCreated(); } catch (e) { setError(e instanceof Error ? e.message : "Could not create showtime."); } finally { setBusy(false); } }
-  return <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/60 p-4 backdrop-blur-sm"><form onSubmit={submit} className="relative w-full max-w-xl rounded-3xl bg-white p-6 shadow-2xl"><button type="button" onClick={onClose} aria-label="Close create showtime" className="absolute right-5 top-5 rounded-lg p-2 text-slate-400 hover:bg-slate-100"><X /></button><p className="eyebrow text-violet-600">NEW SHOWTIME</p><h2 className="mt-2 text-2xl font-black">Create a movie showtime</h2><p className="mt-1 text-sm text-slate-500">VIP, Premium, and Classic seating plus starter pricing rules will be created automatically.</p><div className="mt-5 grid gap-3 sm:grid-cols-2"><Input required name="name" placeholder="Movie title" /><Input required name="venueName" placeholder="Cinema name" /><Input required name="city" defaultValue="Bengaluru" placeholder="City" /><Input required name="startTime" type="datetime-local" min={minimumStartTime} /><Input name="imageUrl" placeholder="Poster image URL (https://...)" type="url" className="sm:col-span-2" /></div><textarea name="description" placeholder="Short movie description" className="mt-3 min-h-24 w-full rounded-xl border p-3 text-sm text-slate-950" />{error && <p role="alert" className="mt-3 rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}<div className="mt-5 flex justify-end gap-2"><Button type="button" variant="outline" onClick={onClose}>Cancel</Button><Button type="submit" disabled={busy} className="bg-violet-600">{busy && <LoaderCircle className="animate-spin" />}Create showtime</Button></div></form></div>;
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/60 p-4 backdrop-blur-sm">
+      <form onSubmit={submit} className="relative w-full max-w-xl rounded-3xl bg-white p-6 shadow-2xl">
+        <button type="button" onClick={onClose} aria-label="Close create showtime" className="absolute right-5 top-5 rounded-lg p-2 text-slate-400 hover:bg-slate-100"><X /></button>
+        <p className="eyebrow text-violet-600">NEW SHOWTIME</p>
+        <h2 className="mt-2 text-2xl font-black">Create a movie showtime</h2>
+        <p className="mt-1 text-sm text-slate-500">VIP, Premium, and Classic seating plus starter pricing rules will be created automatically.</p>
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          <Input required name="name" placeholder="Movie title" />
+          <Input required name="venueName" placeholder="Cinema name" />
+          <Input required name="city" defaultValue="Bengaluru" placeholder="City" />
+          <Input required name="startTime" type="datetime-local" min={minimumStartTime} />
+          <Input name="imageUrl" placeholder="Poster image URL (https://...)" type="url" />
+          <Input name="trailerImageUrl" placeholder="Trailer image URL (https://...)" type="url" />
+          <Input name="trailerUrl" placeholder="Trailer video link (YouTube link)" type="url" className="sm:col-span-2" />
+        </div>
+        <textarea name="description" placeholder="Short movie description" className="mt-3 min-h-24 w-full rounded-xl border p-3 text-sm text-slate-950" />
+        {error && <p role="alert" className="mt-3 rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
+        <div className="mt-5 flex justify-end gap-2">
+          <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+          <Button type="submit" disabled={busy} className="bg-violet-600">{busy && <LoaderCircle className="animate-spin" />}Create showtime</Button>
+        </div>
+      </form>
+    </div>
+  );
 }
 
 function EventRow({ event, onManage, onRefresh }: { event: Event; onManage: (id: string) => void; onRefresh: () => void }) {
@@ -40,10 +64,10 @@ function EventRow({ event, onManage, onRefresh }: { event: Event; onManage: (id:
   return (
     <article className="grid gap-4 border-b p-5 last:border-0 md:grid-cols-[1.6fr_1fr_1fr_auto] md:items-center">
       <div className="flex items-center gap-3">
-        {event.imageUrl && (
+        {(event.imageUrl || event.trailerImageUrl) && (
           <div className="relative size-12 shrink-0 overflow-hidden rounded-xl border border-slate-200">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={event.imageUrl} alt={event.name} className="h-full w-full object-cover" />
+            <img src={event.imageUrl || event.trailerImageUrl!} alt={event.name} className="h-full w-full object-cover" />
           </div>
         )}
         <div>
@@ -90,8 +114,30 @@ function Manager({ eventId, onClose, onRefresh }: { eventId: string; onClose: ()
   useEffect(() => { load(); }, [load]); async function save(path: string, body: unknown) { try { setBusy(true); await json(`/api/admin/events/${eventId}${path}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); await load(); onRefresh(); } catch (e) { setError(e instanceof Error ? e.message : "Could not save."); } finally { setBusy(false); } } if (!event) return <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/60"><LoaderCircle className="animate-spin text-white" /></div>; const sold = event.inventories.filter((seat) => seat.status === "SOLD").length; const revenue = (event.orders ?? []).filter((order) => order.status === "CONFIRMED").reduce((sum, order) => sum + Number(order.totalAmount), 0); return <div className="fixed inset-0 z-50 overflow-auto bg-slate-950/50 p-3 backdrop-blur-sm lg:p-8"><div className="mx-auto max-w-6xl rounded-3xl bg-[#f8f8fc] shadow-2xl"><header className="flex justify-between border-b bg-white p-5"><div><p className="eyebrow text-violet-600">SHOWTIME MANAGER</p><h2 className="mt-1 text-2xl font-black">{event.name}</h2><p className="text-sm text-slate-500">{formatDate(event.startTime)} · {event.venue.name}</p></div><button onClick={onClose} className="rounded-lg p-2 hover:bg-slate-100"><X /></button></header><nav className="flex overflow-auto border-b bg-white">{[["details", "Details"], ["tickets", "Ticket types"], ["pricing", "Pricing rules"], ["seats", "Seat control"], ["history", "Sales & history"]].map(([id, label]) => <button key={id} onClick={() => setTab(id)} className={`shrink-0 border-b-2 px-4 py-3 text-sm font-bold ${tab === id ? "border-violet-600 text-violet-700" : "border-transparent text-slate-500"}`}>{label}</button>)}</nav><main className="p-5 lg:p-8"><div className="grid gap-3 sm:grid-cols-3"><Metric label="Occupancy" value={`${event.inventories.length ? Math.round(sold / event.inventories.length * 100) : 0}%`} /><Metric label="Revenue" value={formatCurrency(revenue)} /><Metric label="Orders" value={String(event.orders?.length ?? 0)} /></div>{error && <p className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}{tab === "details" && <Details event={event} busy={busy} save={(body) => save("", body)} />}{tab === "tickets" && <TicketTypes event={event} busy={busy} save={(body) => save("/ticket-types", body)} />}{tab === "pricing" && <Pricing event={event} busy={busy} save={(body) => save("/pricing", body)} />}{tab === "seats" && <Seats event={event} busy={busy} save={(body) => save("/seats", body)} />}{tab === "history" && <History event={event} />}</main></div></div>; }
 
 function Details({ event, busy, save }: { event: Event; busy: boolean; save: (body: unknown) => void }) {
-  const [form, setForm] = useState({ name: event.name, venueName: event.venue.name, city: event.venue.city, description: event.description ?? "", imageUrl: event.imageUrl ?? "", startTime: local(event.startTime) });
-  return <form onSubmit={(e) => { e.preventDefault(); save(form); }} className="mt-6 grid gap-3 rounded-2xl bg-white p-5 md:grid-cols-2"><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Movie title" /><Input value={form.venueName} onChange={(e) => setForm({ ...form, venueName: e.target.value })} placeholder="Cinema name" /><Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder="City" /><Input type="datetime-local" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} /><Input value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} placeholder="Poster image URL (https://...)" type="url" className="md:col-span-2" /><textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="min-h-24 rounded-xl border p-3 text-sm text-slate-950 md:col-span-2" placeholder="Movie description" /><Button disabled={busy} className="w-fit bg-violet-600 md:col-span-2">Save details</Button></form>;
+  const [form, setForm] = useState({
+    name: event.name,
+    venueName: event.venue.name,
+    city: event.venue.city,
+    description: event.description ?? "",
+    imageUrl: event.imageUrl ?? "",
+    trailerImageUrl: event.trailerImageUrl ?? "",
+    trailerUrl: event.trailerUrl ?? "",
+    startTime: local(event.startTime),
+  });
+
+  return (
+    <form onSubmit={(e) => { e.preventDefault(); save(form); }} className="mt-6 grid gap-3 rounded-2xl bg-white p-5 md:grid-cols-2">
+      <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Movie title" />
+      <Input value={form.venueName} onChange={(e) => setForm({ ...form, venueName: e.target.value })} placeholder="Cinema name" />
+      <Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder="City" />
+      <Input type="datetime-local" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} />
+      <Input value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} placeholder="Poster image URL (https://...)" type="url" />
+      <Input value={form.trailerImageUrl} onChange={(e) => setForm({ ...form, trailerImageUrl: e.target.value })} placeholder="Trailer image URL (https://...)" type="url" />
+      <Input value={form.trailerUrl} onChange={(e) => setForm({ ...form, trailerUrl: e.target.value })} placeholder="Trailer video link (YouTube URL)" type="url" className="md:col-span-2" />
+      <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="min-h-24 rounded-xl border p-3 text-sm text-slate-950 md:col-span-2" placeholder="Movie description" />
+      <Button disabled={busy} className="w-fit bg-violet-600 md:col-span-2">Save details</Button>
+    </form>
+  );
 }
 
 function TicketTypes({ event, busy, save }: { event: Event; busy: boolean; save: (body: unknown) => void }) { const [types, setTypes] = useState(event.ticketTypes); return <section className="mt-6 rounded-2xl bg-white p-5"><p className="text-sm text-slate-500">Edit seating labels and base prices. Confirmed orders never change.</p>{types.map((type, i) => <div key={type.id} className="mt-3 grid gap-2 rounded-xl bg-slate-50 p-3 md:grid-cols-3"><Input value={type.name} onChange={(e) => setTypes(types.map((x, n) => n === i ? { ...x, name: e.target.value } : x))} /><Input value={type.description ?? ""} onChange={(e) => setTypes(types.map((x, n) => n === i ? { ...x, description: e.target.value } : x))} placeholder="Description" /><Input type="number" min="0" value={String(type.basePrice)} onChange={(e) => setTypes(types.map((x, n) => n === i ? { ...x, basePrice: e.target.value } : x))} /> </div>)}<Button disabled={busy} onClick={() => save({ ticketTypes: types })} className="mt-4 bg-violet-600">Save ticket types</Button></section>; }

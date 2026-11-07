@@ -61,6 +61,8 @@ export async function GET(_request: Request, context: { params: Promise<{ eventI
       name: movie.name,
       description: movie.description,
       imageUrl: movie.imageUrl,
+      trailerImageUrl: movie.trailerImageUrl,
+      trailerUrl: movie.trailerUrl,
       startTime: movie.startTime,
       venue: movie.venue,
       ticketTypes: movie.ticketTypes,
