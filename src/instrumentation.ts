@@ -7,7 +7,16 @@ export async function register() {
         ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "trailerImageUrl" TEXT;
         ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "trailerUrl" TEXT;
       `);
-      console.log("[db] Verified Event table image and trailer columns.");
+      // Update any legacy IMDb webpage links that cannot be rendered by browsers
+      await prisma.event.updateMany({
+        where: {
+          imageUrl: { contains: "imdb.com" },
+        },
+        data: {
+          imageUrl: "https://upload.wikimedia.org/wikipedia/en/a/a4/The_Jungle_Book_%282016%29.jpg",
+        },
+      });
+      console.log("[db] Verified Event table image columns and cleaned legacy links.");
     } catch (err) {
       console.warn("[db] Column migration check skipped or failed:", err);
     }

@@ -26,11 +26,48 @@ function MovieCard({ movie, index }: { movie: Movie; index: number }) {
   const lowest = prices.length ? Math.min(...prices) : Math.min(...movie.ticketTypes.map((item) => Number(item.basePrice)));
   const gradients = ["from-[#4f46e5] via-[#7c3aed] to-[#db2777]", "from-[#0f766e] via-[#0891b2] to-[#4f46e5]", "from-[#c2410c] via-[#e11d48] to-[#6d28d9]"];
   const [imageFailed, setImageFailed] = useState(false);
-  const displayImage = movie.imageUrl || movie.trailerImageUrl;
+
+  let displayImage = movie.imageUrl || movie.trailerImageUrl;
+  if (displayImage && displayImage.includes("imdb.com") && movie.name.toLowerCase().includes("jungle book")) {
+    displayImage = "https://upload.wikimedia.org/wikipedia/en/a/a4/The_Jungle_Book_%282016%29.jpg";
+  }
   const showImage = Boolean(displayImage) && !imageFailed;
 
-  return <article className="group overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl"><div className={`relative h-48 overflow-hidden bg-gradient-to-br ${gradients[index % gradients.length]} p-5`}>{showImage && (// eslint-disable-next-line @next/next/no-img-element
-  <img src={displayImage!} alt={movie.name} onError={() => setImageFailed(true)} className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />)}<div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/20" /><div className="relative flex h-full flex-col justify-between"><span className="w-fit rounded-full bg-black/40 px-2.5 py-1 text-xs font-bold text-white backdrop-blur">MOVIE</span>{!showImage && <p className="max-w-[80%] text-4xl font-black italic tracking-[-.08em] text-white/75">{movie.name.split(" ").map((word) => word[0]).join("")}</p>}</div></div><div className="p-5"><h3 className="text-xl font-extrabold tracking-tight">{movie.name}</h3><p className="mt-2 line-clamp-2 min-h-10 text-sm leading-5 text-slate-500">{movie.description ?? "A big-screen story, waiting for your favorite seat."}</p><div className="mt-4 space-y-2 text-xs font-medium text-slate-500"><p className="flex items-center gap-2"><CalendarDays className="size-4 text-violet-500" />{formatDate(movie.startTime)}</p><p className="flex items-center gap-2"><MapPin className="size-4 text-violet-500" />{movie.venue.name}, {movie.venue.city}</p></div><div className="mt-5 flex items-center justify-between"><span className="text-sm text-slate-500">From <b className="text-slate-950">{formatCurrency(lowest)}</b></span><Link href={`/movies/${movie.id}`}><Button className="rounded-xl bg-violet-600 hover:bg-violet-700">Book <ArrowRight /></Button></Link></div></div></article>;
+  return (
+    <article className="group overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl">
+      <div className={`relative h-48 overflow-hidden bg-gradient-to-br ${gradients[index % gradients.length]} p-5`}>
+        {showImage && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={displayImage!}
+            alt={movie.name}
+            referrerPolicy="no-referrer"
+            onError={() => setImageFailed(true)}
+            className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+          />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/20" />
+        <div className="relative flex h-full flex-col justify-between">
+          <span className="w-fit rounded-full bg-black/40 px-2.5 py-1 text-xs font-bold text-white backdrop-blur">MOVIE</span>
+          {!showImage && <p className="max-w-[80%] text-4xl font-black italic tracking-[-.08em] text-white/75">{movie.name.split(" ").map((word) => word[0]).join("")}</p>}
+        </div>
+      </div>
+      <div className="p-5">
+        <h3 className="text-xl font-extrabold tracking-tight">{movie.name}</h3>
+        <p className="mt-2 line-clamp-2 min-h-10 text-sm leading-5 text-slate-500">{movie.description ?? "A big-screen story, waiting for your favorite seat."}</p>
+        <div className="mt-4 space-y-2 text-xs font-medium text-slate-500">
+          <p className="flex items-center gap-2"><CalendarDays className="size-4 text-violet-500" />{formatDate(movie.startTime)}</p>
+          <p className="flex items-center gap-2"><MapPin className="size-4 text-violet-500" />{movie.venue.name}, {movie.venue.city}</p>
+        </div>
+        <div className="mt-5 flex items-center justify-between">
+          <span className="text-sm text-slate-500">From <b className="text-slate-950">{formatCurrency(lowest)}</b></span>
+          <Link href={`/movies/${movie.id}`}>
+            <Button className="rounded-xl bg-violet-600 hover:bg-violet-700">Book <ArrowRight /></Button>
+          </Link>
+        </div>
+      </div>
+    </article>
+  );
 }
 function Metric({ value, label }: { value: string; label: string }) { return <span><b className="block text-lg text-white">{value}</b><span className="text-slate-400">{label}</span></span>; }
 function Step({ number, title, text }: { number: string; title: string; text: string }) { return <div className="rounded-2xl bg-[#f8f8fc] p-6"><span className="text-sm font-black text-violet-600">{number}</span><h3 className="mt-8 text-xl font-extrabold">{title}</h3><p className="mt-2 text-sm leading-6 text-slate-500">{text}</p></div>; }
