@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "test": "node --import tsx --test \"src/**/*.test.ts\"",
     "lint": "eslint",
     "worker:outbox": "tsx scripts/outbox-worker.ts",
     "postinstall": "prisma skills sync || exit 0"
@@ -44,5 +45,6 @@
     "prisma": "^7.10.0",
     "tailwindcss": "^4",
     "typescript": "^5"
+
   }
 }
